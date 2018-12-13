@@ -445,10 +445,11 @@ parse_header(State=#state{opts=Opts, frag_state=FragState, extensions=Extensions
 	MaxFrameSize = maps:get(max_frame_size, Opts, infinity),
 	case cow_ws:parse_header(Data, Extensions, FragState) of
 		%% All frames sent from the client to the server are masked.
-		{_, _, _, _, undefined, _} ->
-			websocket_close(State, HandlerState, {error, badframe});
 		{_, _, _, Len, _, _} when Len > MaxFrameSize ->
 			websocket_close(State, HandlerState, {error, badsize});
+		{Type, FragState2, Rsv, Len, undefined, Rest} ->
+			parse_payload(State#state{frag_state=FragState2}, HandlerState,
+				#ps_payload{type=Type, len=Len, mask_key=0, rsv=Rsv}, Rest);
 		{Type, FragState2, Rsv, Len, MaskKey, Rest} ->
 			parse_payload(State#state{frag_state=FragState2}, HandlerState,
 				#ps_payload{type=Type, len=Len, mask_key=MaskKey, rsv=Rsv}, Rest);
